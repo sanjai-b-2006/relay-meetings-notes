@@ -30,7 +30,31 @@ If both keys are set, OpenRouter wins.
 
 ---
 
-## 2. Slack
+## 2. Composio — connect Slack, Linear, Notion with one login each (no developer keys)
+
+Skip this section entirely if you'd rather grab per-service API keys — go
+to §3–5 below instead. If you want the OAuth path:
+
+1. Go to <https://dashboard.composio.dev> → sign up (free tier available).
+2. Copy your Composio API key: **Settings → API Keys** → `COMPOSIO_API_KEY`.
+3. Find **Slack**, **Notion**, and **Linear** in the toolkit/app catalog and
+   click **Connect** (label may read "Add Connection") for each — this logs
+   you into that app directly (Slack/Notion/Linear's own login screen), not
+   a developer console. No secrets to copy.
+4. Bundle the three connected toolkits into one **MCP Server** (Composio's
+   dashboard has an MCP/Tool Router section for this) and copy the URL it
+   gives you → `COMPOSIO_MCP_URL`.
+5. Set `COMPOSIO_TOOLS=slack,linear,notion` (or just the ones you connected).
+6. Composio's dashboard UI changes over time — if a label above doesn't
+   match what you see, look for "Connect"/"OAuth"/"MCP Server" wording; the
+   underlying flow (per-app login, then a URL) stays the same.
+
+Quick test: `python -m relay file samples/standup.json` — all three tools
+should show `live` instead of `demo mode`.
+
+---
+
+## 3. Slack (direct — skip if using Composio)
 
 Goal: `SLACK_BOT_TOKEN`, `SLACK_TEAM_ID`, `SLACK_CHANNEL_ID`.
 
@@ -55,7 +79,7 @@ Quick test: `python -m relay file samples/standup.json --slack`
 
 ---
 
-## 3. Linear
+## 4. Linear (direct — skip if using Composio)
 
 Goal: `LINEAR_API_TOKEN` (and optionally `LINEAR_TEAM_ID`).
 
@@ -72,7 +96,7 @@ Quick test: `python -m relay file samples/standup.json --linear`
 
 ---
 
-## 4. Notion
+## 5. Notion (direct — skip if using Composio)
 
 Goal: `NOTION_TOKEN`, `NOTION_PARENT_PAGE_ID`.
 
@@ -94,7 +118,7 @@ Quick test: `python -m relay file samples/standup.json --notion`
 
 ---
 
-## 5. Everything at once
+## 6. Everything at once
 
 ```bash
 uvicorn api.main:app --port 8000     # open http://127.0.0.1:8000

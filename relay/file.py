@@ -16,7 +16,7 @@ import os
 from agents import Agent, OpenAIChatCompletionsModel, Runner, set_tracing_disabled
 
 from .extract import OPENROUTER_BASE_URL, get_model
-from .mcp_config import build_server, configured_tools, missing_tokens
+from .mcp_config import build_servers, configured_tools, missing_tokens
 from .schema import MeetingExtraction
 
 
@@ -124,10 +124,9 @@ async def file_actions(extraction: dict, targets: list[str] | None = None) -> di
         return results
 
     async with contextlib.AsyncExitStack() as stack:
-        servers = []
-        for t in live:
-            server = await stack.enter_async_context(build_server(t))
-            servers.append(server)
+        servers = [
+            await stack.enter_async_context(s) for s in build_servers(live)
+        ]
 
         agent = Agent(
             name="Relay Filer",

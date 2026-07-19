@@ -1,22 +1,27 @@
-"""Definitions of the three MCP stdio servers (Slack, Linear, Notion).
+"""MCP server definitions for Slack, Linear, and Notion.
 
-Each tool is described by:
-- the env tokens it needs (documented in .env.example),
-- a factory that builds an MCPServerStdio for the OpenAI Agents SDK.
+Two connection modes, auto-detected from the environment:
 
-If a tool's tokens are missing, Relay runs in "demo mode" for that tool:
+1. Composio (recommended if you don't want to hunt for per-service API
+   keys): set COMPOSIO_MCP_URL. You connect Slack/Linear/Notion via OAuth
+   login in the Composio dashboard (dashboard.composio.dev), bundle them
+   into one "MCP Server", and paste its URL here. One HTTP MCP server
+   covers all three tools.
+
+2. Direct per-service stdio servers (the original approach): each tool
+   needs its own token(s), documented in .env.example / SETUP_TOKENS.md.
+   Community/official servers launched as npx subprocesses.
+
+If a tool isn't configured either way, Relay runs in "demo mode" for it:
 instead of filing, it prints/returns what WOULD have been filed. This lets
 judges see the full pipeline without setting up every workspace.
-
-The server packages below are community/official stdio servers launched via
-npx (Node.js required). Swap the commands here if you prefer different ones.
 """
 
 import json
 import os
 import sys
 
-from agents.mcp import MCPServerStdio
+from agents.mcp import MCPServer, MCPServerStdio, MCPServerStreamableHttp
 
 # npx lives at npx.cmd on Windows
 NPX = "npx.cmd" if sys.platform == "win32" else "npx"
@@ -28,8 +33,16 @@ TOOL_TOKENS: dict[str, list[str]] = {
 }
 
 
+def composio_enabled() -> bool:
+    return bool(os.getenv("COMPOSIO_MCP_URL"))
+
+
 def configured_tools() -> list[str]:
-    """Tools whose required tokens are all present in the environment."""
+    """Tools available to file into, right now."""
+    if composio_enabled():
+        # Which apps you actually connected in the Composio dashboard.
+        declared = os.getenv("COMPOSIO_TOOLS", "slack,linear,notion")
+        return [t.strip() for t in declared.split(",") if t.strip() in TOOL_TOKENS]
     return [
         tool
         for tool, tokens in TOOL_TOKENS.items()
@@ -38,7 +51,21 @@ def configured_tools() -> list[str]:
 
 
 def missing_tokens(tool: str) -> list[str]:
+    if composio_enabled():
+        return ["COMPOSIO_TOOLS (declare this tool)"]
     return [t for t in TOOL_TOKENS[tool] if not os.getenv(t)]
+
+
+def build_composio_server() -> MCPServerStreamableHttp:
+    headers = {}
+    if os.getenv("COMPOSIO_API_KEY"):
+        headers["x-api-key"] = os.environ["COMPOSIO_API_KEY"]
+    return MCPServerStreamableHttp(
+        name="composio",
+        params={"url": os.environ["COMPOSIO_MCP_URL"], "headers": headers},
+        cache_tools_list=True,
+        client_session_timeout_seconds=60,
+    )
 
 
 def build_server(tool: str) -> MCPServerStdio:
@@ -87,3 +114,14 @@ def build_server(tool: str) -> MCPServerStdio:
             client_session_timeout_seconds=60,
         )
     raise ValueError(f"Unknown tool: {tool}")
+
+
+def build_servers(live: list[str]) -> list[MCPServer]:
+    """Build the MCP server(s) needed to file into `live` tools.
+
+    Composio mode: one shared HTTP server covers every tool. Direct mode:
+    one stdio subprocess per tool.
+    """
+    if composio_enabled():
+        return [build_composio_server()] if live else []
+    return [build_server(t) for t in live]
