@@ -13,12 +13,28 @@ what would have been filed instead of erroring (judge-reproducibility).
 import contextlib
 import os
 
-from agents import Agent, Runner
+from agents import Agent, OpenAIChatCompletionsModel, Runner, set_tracing_disabled
 
+from .extract import OPENROUTER_BASE_URL, get_model
 from .mcp_config import build_server, configured_tools, missing_tokens
 from .schema import MeetingExtraction
 
-MODEL = os.getenv("RELAY_MODEL", "gpt-5.6")
+
+def get_agent_model():
+    """Model for the filing agent — OpenRouter (chat-completions) or OpenAI."""
+    if os.getenv("OPENROUTER_API_KEY"):
+        from openai import AsyncOpenAI
+
+        # tracing uploads need an OpenAI platform key; skip when on OpenRouter
+        set_tracing_disabled(True)
+        return OpenAIChatCompletionsModel(
+            model=get_model(),
+            openai_client=AsyncOpenAI(
+                base_url=OPENROUTER_BASE_URL,
+                api_key=os.environ["OPENROUTER_API_KEY"],
+            ),
+        )
+    return get_model()
 
 ALL_TOOLS = ["slack", "linear", "notion"]
 
@@ -116,7 +132,7 @@ async def file_actions(extraction: dict, targets: list[str] | None = None) -> di
         agent = Agent(
             name="Relay Filer",
             instructions=AGENT_INSTRUCTIONS,
-            model=MODEL,
+            model=get_agent_model(),
             mcp_servers=servers,
         )
         try:

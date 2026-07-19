@@ -40,11 +40,12 @@ pip install -r requirements.txt
 copy .env.example .env          # then edit .env
 ```
 
-Fill in `.env`:
+Fill in `.env` — **[SETUP_TOKENS.md](SETUP_TOKENS.md) has click-by-click
+instructions for every token below.**
 
 | Variable | Needed for | Where to get it |
 |---|---|---|
-| `OPENAI_API_KEY` | extraction + filing agent (required) | platform.openai.com |
+| `OPENAI_API_KEY` *or* `OPENROUTER_API_KEY` | extraction + filing agent | platform.openai.com / openrouter.ai (OpenRouter has free models; see `RELAY_MODEL`) |
 | `SLACK_BOT_TOKEN`, `SLACK_TEAM_ID`, `SLACK_CHANNEL_ID` | Slack filing | api.slack.com/apps (bot token needs `chat:write`, `channels:read`) |
 | `LINEAR_API_TOKEN`, `LINEAR_TEAM_ID` | Linear filing | linear.app/settings/api |
 | `NOTION_TOKEN`, `NOTION_PARENT_PAGE_ID` | Notion filing | notion.so/my-integrations (share the parent page with the integration) |

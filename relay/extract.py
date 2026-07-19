@@ -1,12 +1,40 @@
-"""Transcript -> structured extraction via GPT-5.6 structured outputs."""
+"""Transcript -> structured extraction.
 
+Provider is auto-detected:
+- OPENROUTER_API_KEY set  -> OpenRouter (OpenAI-compatible, openrouter.ai)
+- otherwise               -> OpenAI platform (OPENAI_API_KEY)
+
+RELAY_MODEL picks the model. On OpenRouter, bare OpenAI model names are
+auto-prefixed ("gpt-5.6" -> "openai/gpt-5.6"); set a full id like
+"meta-llama/llama-3.3-70b-instruct:free" to use anything else.
+"""
+
+import json
 import os
+import re
 
 from openai import OpenAI
 
 from .schema import MeetingExtraction
 
-MODEL = os.getenv("RELAY_MODEL", "gpt-5.6")
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
+
+def get_model() -> str:
+    model = os.getenv("RELAY_MODEL", "gpt-5.6")
+    if os.getenv("OPENROUTER_API_KEY") and "/" not in model:
+        model = f"openai/{model}"
+    return model
+
+
+def get_client() -> OpenAI:
+    if os.getenv("OPENROUTER_API_KEY"):
+        return OpenAI(
+            base_url=OPENROUTER_BASE_URL,
+            api_key=os.environ["OPENROUTER_API_KEY"],
+        )
+    return OpenAI()
+
 
 SYSTEM_PROMPT = """\
 You are Relay, an assistant that turns raw meeting transcripts into a
@@ -35,14 +63,43 @@ owners, dates, or tasks. source_quote must be copied from the transcript,
 not paraphrased.
 """
 
+JSON_FALLBACK_SUFFIX = (
+    "\nRespond with ONLY a JSON object matching this schema, no prose, "
+    "no markdown fences:\n" + json.dumps(MeetingExtraction.model_json_schema())
+)
+
+
+def _extract_json_fallback(client: OpenAI, model: str, transcript: str) -> dict:
+    """Plain JSON-mode path for models without structured-output support."""
+    completion = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT + JSON_FALLBACK_SUFFIX},
+            {"role": "user", "content": transcript},
+        ],
+    )
+    text = completion.choices[0].message.content or ""
+    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip())
+    return MeetingExtraction.model_validate_json(text).model_dump()
+
 
 def extract_actions(transcript: str) -> dict:
-    """Run GPT-5.6 structured extraction over a raw transcript."""
-    client = OpenAI()
-    response = client.responses.parse(
-        model=MODEL,
-        instructions=SYSTEM_PROMPT,
-        input=transcript,
-        text_format=MeetingExtraction,
-    )
-    return response.output_parsed.model_dump()
+    """Run structured extraction over a raw transcript."""
+    client = get_client()
+    model = get_model()
+    try:
+        completion = client.chat.completions.parse(
+            model=model,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": transcript},
+            ],
+            response_format=MeetingExtraction,
+        )
+        parsed = completion.choices[0].message.parsed
+        if parsed is None:
+            raise ValueError("model returned no parsed output")
+        return parsed.model_dump()
+    except Exception:
+        # some providers/models don't support json_schema response_format
+        return _extract_json_fallback(client, model, transcript)
