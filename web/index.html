@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relay — Meeting to Action</title>
+<style>
+  :root {
+    --bg: #0f1117; --panel: #181b23; --panel2: #1f232e; --border: #2c3140;
+    --text: #e8eaf0; --muted: #9aa1b2; --accent: #5b8cff; --accent2: #7c5bff;
+    --green: #3ecf8e; --amber: #f5b95f; --red: #ef6a6a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 "Segoe UI", system-ui, sans-serif; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 32px 20px 80px; }
+  header h1 { font-size: 26px; margin: 0; }
+  header h1 span { background: linear-gradient(90deg, var(--accent), var(--accent2));
+                   -webkit-background-clip: text; background-clip: text; color: transparent; }
+  header p { color: var(--muted); margin: 6px 0 0; }
+  .steps { display: flex; gap: 8px; margin: 24px 0; }
+  .step { flex: 1; text-align: center; padding: 8px; border-radius: 8px;
+          background: var(--panel); color: var(--muted); border: 1px solid var(--border); font-size: 13px; }
+  .step.active { color: var(--text); border-color: var(--accent); background: var(--panel2); }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+          padding: 20px; margin-bottom: 16px; }
+  textarea { width: 100%; min-height: 260px; background: var(--panel2); color: var(--text);
+             border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+             font: 13px/1.5 Consolas, monospace; resize: vertical; }
+  button { background: linear-gradient(90deg, var(--accent), var(--accent2)); color: #fff;
+           border: 0; border-radius: 8px; padding: 10px 22px; font-size: 15px;
+           font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  button.ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+  .row { display: flex; gap: 10px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+  .badge { font-size: 12px; padding: 2px 10px; border-radius: 99px; border: 1px solid var(--border); }
+  .badge.live { color: var(--green); border-color: var(--green); }
+  .badge.demo { color: var(--amber); border-color: var(--amber); }
+  .item { background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
+          padding: 14px; margin-bottom: 10px; }
+  .item .top { display: flex; gap: 10px; align-items: center; }
+  .item input[type=text], .item input[type=date], .item select {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 8px; font-size: 14px; }
+  .item input.title { flex: 1; font-weight: 600; }
+  .quote { color: var(--muted); font-size: 13px; margin-top: 8px; border-left: 3px solid var(--accent);
+           padding-left: 10px; font-style: italic; }
+  .meta { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  .meta label { color: var(--muted); font-size: 13px; }
+  h3 { margin: 0 0 10px; font-size: 16px; }
+  ul { margin: 6px 0; padding-left: 20px; color: var(--muted); }
+  .toggles { display: flex; gap: 14px; flex-wrap: wrap; }
+  .toggle { display: flex; align-items: center; gap: 8px; background: var(--panel2);
+            border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px; cursor: pointer; }
+  .toggle input { accent-color: var(--accent); width: 16px; height: 16px; }
+  .result { border-left: 4px solid var(--green); padding: 10px 14px; background: var(--panel2);
+            border-radius: 6px; margin-bottom: 10px; white-space: pre-wrap; font-size: 13px; }
+  .result.skipped { border-left-color: var(--amber); }
+  .result.error { border-left-color: var(--red); }
+  .result b { display: block; margin-bottom: 4px; font-size: 14px; }
+  #spinner { color: var(--muted); display: none; }
+  .error-msg { color: var(--red); margin-top: 10px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span>Relay</span> — meeting to action</h1>
+    <p>Paste a transcript → review extracted decisions &amp; action items → file them to Slack, Linear, and Notion. Nothing is filed without your confirmation.</p>
+  </header>
+
+  <div class="steps">
+    <div class="step active" id="step1">1 · Paste transcript</div>
+    <div class="step" id="step2">2 · Review &amp; approve</div>
+    <div class="step" id="step3">3 · Filed</div>
+  </div>
+
+  <!-- Screen 1: paste -->
+  <section id="screen-paste" class="card">
+    <h3>Meeting transcript</h3>
+    <textarea id="transcript" placeholder="Paste your meeting transcript here…"></textarea>
+    <div class="row">
+      <button id="btn-extract">Extract action items</button>
+      <button class="ghost" id="btn-sample">Load sample transcript</button>
+      <span id="spinner">Working…</span>
+    </div>
+    <div class="error-msg" id="extract-error"></div>
+  </section>
+
+  <!-- Screen 2: review -->
+  <section id="screen-review" class="hidden">
+    <div class="card">
+      <h3 id="r-title"></h3>
+      <p id="r-summary" style="color:var(--muted)"></p>
+      <div id="r-decisions"></div>
+      <div id="r-questions"></div>
+    </div>
+    <div class="card">
+      <h3>Action items <span style="color:var(--muted);font-weight:normal;font-size:13px">— edit anything, untick to drop</span></h3>
+      <div id="r-items"></div>
+    </div>
+    <div class="card">
+      <h3>File to</h3>
+      <div class="toggles" id="tool-toggles"></div>
+      <div class="row">
+        <button id="btn-file">Confirm &amp; file</button>
+        <button class="ghost" id="btn-back">Back</button>
+        <span id="spinner2" style="color:var(--muted);display:none">Filing…</span>
+      </div>
+      <div class="error-msg" id="file-error"></div>
+    </div>
+  </section>
+
+  <!-- Screen 3: done -->
+  <section id="screen-done" class="hidden">
+    <div class="card">
+      <h3>Done — here's what happened</h3>
+      <div id="results"></div>
+      <div class="row"><button id="btn-again">Start over</button></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let extraction = null;
+let toolStatus = { slack: "demo", linear: "demo", notion: "demo" };
+
+fetch("/api/status").then(r => r.json()).then(d => { toolStatus = d.tools; }).catch(() => {});
+
+const SAMPLE_URL = "/samples/standup.txt";
+$("btn-sample").onclick = async () => {
+  const r = await fetch(SAMPLE_URL);
+  $("transcript").value = r.ok ? await r.text() : "Sample not found — paste your own transcript.";
+};
+
+function setStep(n) {
+  [1, 2, 3].forEach(i => $("step" + i).classList.toggle("active", i === n));
+  $("screen-paste").classList.toggle("hidden", n !== 1);
+  $("screen-review").classList.toggle("hidden", n !== 2);
+  $("screen-done").classList.toggle("hidden", n !== 3);
+}
+
+$("btn-extract").onclick = async () => {
+  $("extract-error").textContent = "";
+  $("btn-extract").disabled = true;
+  $("spinner").style.display = "inline";
+  try {
+    const r = await fetch("/api/extract", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transcript: $("transcript").value }),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+    extraction = await r.json();
+    renderReview();
+    setStep(2);
+  } catch (e) {
+    $("extract-error").textContent = e.message;
+  } finally {
+    $("btn-extract").disabled = false;
+    $("spinner").style.display = "none";
+  }
+};
+
+function esc(s) {
+  return (s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+function renderReview() {
+  $("r-title").textContent = extraction.meeting_title + (extraction.date ? " — " + extraction.date : "");
+  $("r-summary").textContent = extraction.summary;
+  $("r-decisions").innerHTML = extraction.decisions.length
+    ? "<b>Decisions</b><ul>" + extraction.decisions.map(d => `<li>${esc(d.text)}</li>`).join("") + "</ul>" : "";
+  $("r-questions").innerHTML = extraction.open_questions.length
+    ? "<b>Open questions</b><ul>" + extraction.open_questions.map(q => `<li>${esc(q)}</li>`).join("") + "</ul>" : "";
+
+  $("r-items").innerHTML = extraction.action_items.map((it, i) => `
+    <div class="item" data-i="${i}">
+      <div class="top">
+        <input type="checkbox" class="keep" checked title="Include this item">
+        <input type="text" class="title" value="${esc(it.title)}">
+      </div>
+      <div class="meta">
+        <label>Owner <input type="text" class="owner" size="10" value="${esc(it.owner || "")}" placeholder="unassigned"></label>
+        <label>Due <input type="date" class="due" value="${esc(it.due || "")}"></label>
+        <label>Priority <select class="priority">
+          ${["low", "medium", "high"].map(p => `<option ${p === it.priority ? "selected" : ""}>${p}</option>`).join("")}
+        </select></label>
+      </div>
+      <div class="quote">“${esc(it.source_quote)}”</div>
+    </div>`).join("") || "<p style='color:var(--muted)'>No action items found.</p>";
+
+  $("tool-toggles").innerHTML = ["slack", "linear", "notion"].map(t => `
+    <label class="toggle">
+      <input type="checkbox" name="tool" value="${t}" checked>
+      ${t[0].toUpperCase() + t.slice(1)}
+      <span class="badge ${toolStatus[t]}">${toolStatus[t] === "live" ? "live" : "demo mode"}</span>
+    </label>`).join("");
+}
+
+function collectEdits() {
+  const items = [];
+  document.querySelectorAll("#r-items .item").forEach(el => {
+    if (!el.querySelector(".keep").checked) return;
+    const src = extraction.action_items[+el.dataset.i];
+    items.push({
+      title: el.querySelector(".title").value.trim(),
+      owner: el.querySelector(".owner").value.trim() || null,
+      due: el.querySelector(".due").value || null,
+      priority: el.querySelector(".priority").value,
+      source_quote: src.source_quote,
+    });
+  });
+  return { ...extraction, action_items: items };
+}
+
+$("btn-back").onclick = () => setStep(1);
+
+$("btn-file").onclick = async () => {
+  const targets = [...document.querySelectorAll("input[name=tool]:checked")].map(c => c.value);
+  $("file-error").textContent = "";
+  if (!targets.length) { $("file-error").textContent = "Pick at least one tool."; return; }
+  $("btn-file").disabled = true;
+  $("spinner2").style.display = "inline";
+  try {
+    const r = await fetch("/api/file", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ extraction: collectEdits(), targets }),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+    const { results } = await r.json();
+    $("results").innerHTML = Object.entries(results).map(([tool, res]) => `
+      <div class="result ${res.status === "filed" ? "" : res.status}">
+        <b>${tool[0].toUpperCase() + tool.slice(1)} — ${res.status}</b>
+        ${esc(res.preview || res.detail)}
+      </div>`).join("");
+    setStep(3);
+  } catch (e) {
+    $("file-error").textContent = e.message;
+  } finally {
+    $("btn-file").disabled = false;
+    $("spinner2").style.display = "none";
+  }
+};
+
+$("btn-again").onclick = () => { extraction = null; setStep(1); };
+</script>
+</body>
+</html>

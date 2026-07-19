@@ -1,0 +1,38 @@
+Product sync — Monday, July 20, 2026, 9:30 AM
+Attendees: Maya (PM), Sam (backend), Priya (frontend), Jordan (design), Alex (marketing)
+
+Maya: Morning everyone. Quick sync — we have the beta launch coming up, so let's keep it tight. Sam, where are we on the login issue?
+
+Sam: The login timeout bug is still open. Sessions are expiring after five minutes instead of thirty. I found the misconfigured TTL in the auth service yesterday.
+
+Maya: That's a blocker for the beta. Sam, can you fix the login timeout bug before Friday?
+
+Sam: Yeah, I can have it fixed and deployed to staging by Friday.
+
+Maya: Great, that's high priority. Priya, how's the onboarding flow?
+
+Priya: The new onboarding screens are done, but I'm waiting on final copy for the welcome email. Jordan, is that with you or with Alex?
+
+Jordan: The design's done — Alex has the copy draft. Alex, can you send Priya the final welcome email copy by Wednesday?
+
+Alex: Sure, Wednesday works. One thing though — does legal need to review the new copy? It mentions the free trial terms.
+
+Maya: Good question. I don't know — let's not block on it, but someone should find out. Leaving that open for now.
+
+Maya: On timing — engineering flagged that Thursday is too tight with the login fix landing Friday. So we've decided to move the beta launch to next Tuesday, the 28th. Everyone aligned?
+
+Sam: Works for me.
+
+Priya: Fine by me. That gives me time to polish the empty states too. I'll update the onboarding screens with the final copy once Alex sends it — should be done by Monday.
+
+Maya: Perfect. Jordan, one more thing — can you put together a short demo video for the beta announcement? Doesn't need to be fancy.
+
+Jordan: Sure. I'll aim to have a rough cut by Monday for review.
+
+Alex: And I'll draft the beta announcement post once the demo video is ready. Low priority until then.
+
+Maya: One more decision while we're all here — we agreed to keep the beta invite-only for the first two weeks, right? No open signups until we see how the servers hold up.
+
+Sam: Yes, agreed. Invite-only first.
+
+Maya: Okay, that's settled. Anything else? ... No? Great — thanks everyone, back to it.

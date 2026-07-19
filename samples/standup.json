@@ -1,0 +1,56 @@
+{
+  "meeting_title": "Product Sync — Beta Launch Planning",
+  "date": "2026-07-20",
+  "attendees": ["Maya", "Sam", "Priya", "Jordan", "Alex"],
+  "summary": "The team reviewed beta-launch readiness. The launch was moved from Thursday to Tuesday July 28 because the login timeout fix lands Friday, and the beta will be invite-only for its first two weeks.",
+  "decisions": [
+    {
+      "text": "Move the beta launch to Tuesday, July 28.",
+      "context": "So we've decided to move the beta launch to next Tuesday, the 28th."
+    },
+    {
+      "text": "Keep the beta invite-only for the first two weeks.",
+      "context": "we agreed to keep the beta invite-only for the first two weeks, right? No open signups until we see how the servers hold up."
+    }
+  ],
+  "action_items": [
+    {
+      "title": "Fix the login timeout bug",
+      "owner": "Sam",
+      "due": "2026-07-24",
+      "priority": "high",
+      "source_quote": "Sam, can you fix the login timeout bug before Friday?"
+    },
+    {
+      "title": "Send Priya the final welcome email copy",
+      "owner": "Alex",
+      "due": "2026-07-22",
+      "priority": "medium",
+      "source_quote": "Alex, can you send Priya the final welcome email copy by Wednesday?"
+    },
+    {
+      "title": "Update onboarding screens with final copy",
+      "owner": "Priya",
+      "due": "2026-07-27",
+      "priority": "medium",
+      "source_quote": "I'll update the onboarding screens with the final copy once Alex sends it — should be done by Monday."
+    },
+    {
+      "title": "Produce a rough-cut demo video for the beta announcement",
+      "owner": "Jordan",
+      "due": "2026-07-27",
+      "priority": "medium",
+      "source_quote": "I'll aim to have a rough cut by Monday for review."
+    },
+    {
+      "title": "Draft the beta announcement post",
+      "owner": "Alex",
+      "due": null,
+      "priority": "low",
+      "source_quote": "And I'll draft the beta announcement post once the demo video is ready. Low priority until then."
+    }
+  ],
+  "open_questions": [
+    "Does legal need to review the new welcome email copy, given it mentions the free trial terms?"
+  ]
+}
