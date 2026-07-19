@@ -55,6 +55,7 @@ def build_server(tool: str) -> MCPServerStdio:
                 },
             },
             cache_tools_list=True,
+            client_session_timeout_seconds=60,
         )
     if tool == "linear":
         return MCPServerStdio(
@@ -65,6 +66,7 @@ def build_server(tool: str) -> MCPServerStdio:
                 "env": {"LINEAR_API_TOKEN": os.environ["LINEAR_API_TOKEN"]},
             },
             cache_tools_list=True,
+            client_session_timeout_seconds=60,
         )
     if tool == "notion":
         return MCPServerStdio(
@@ -82,5 +84,6 @@ def build_server(tool: str) -> MCPServerStdio:
                 },
             },
             cache_tools_list=True,
+            client_session_timeout_seconds=60,
         )
     raise ValueError(f"Unknown tool: {tool}")

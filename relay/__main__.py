@@ -15,6 +15,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+# Windows consoles default to cp1252, which chokes on emoji in agent output
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 

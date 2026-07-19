@@ -1,0 +1,55 @@
+{
+  "meeting_title": "Product sync",
+  "date": "2026-07-20",
+  "attendees": [
+    "Maya",
+    "Sam",
+    "Priya",
+    "Jordan",
+    "Alex"
+  ],
+  "summary": "The team confirmed that the login timeout bug must be fixed by Friday and the onboarding copy finalized by Wednesday. The beta launch is postponed to Tuesday, July 28, and will remain invite‑only for two weeks. Actions include creating a demo video and announcement post, and updating onboarding screens once the copy arrives.",
+  "decisions": [
+    {
+      "text": "Beta launch moved to next Tuesday, July 28.",
+      "context": "Maya: On timing — engineering flagged that Thursday is too tight with the login fix landing Friday. So we've decided to move the beta launch to next Tuesday, the 28th."
+    },
+    {
+      "text": "Beta launch will be invite‑only for the first two weeks.",
+      "context": "Maya: One more decision while we're all here — we agreed to keep the beta invite-only for the first two weeks, right? No open signups until we see how the servers hold up."
+    }
+  ],
+  "action_items": [
+    {
+      "title": "Fix login timeout bug and deploy to staging by Friday",
+      "owner": "Sam",
+      "due": "2026-07-22",
+      "priority": "high",
+      "source_quote": "Sam: Yeah, I can have it fixed and deployed to staging by Friday."
+    },
+    {
+      "title": "Send final welcome email copy to Priya by Wednesday",
+      "owner": "Alex",
+      "due": "2026-07-22",
+      "priority": "medium",
+      "source_quote": "Maya: Alex, can you send Priya the final welcome email copy by Wednesday?"
+    },
+    {
+      "title": "Create a rough draft of the beta announcement demo video by Monday",
+      "owner": "Jordan",
+      "due": "2026-07-24",
+      "priority": "medium",
+      "source_quote": "Jordan: Sure. I'll aim to have a rough cut by Monday for review."
+    },
+    {
+      "title": "Update onboarding screens with final copy by Monday",
+      "owner": "Priya",
+      "due": "2026-07-24",
+      "priority": "medium",
+      "source_quote": "Priya: I'll update the onboarding screens with the final copy once Alex sends it — should be done by Monday."
+    }
+  ],
+  "open_questions": [
+    "Does legal need to review the new copy?"
+  ]
+}

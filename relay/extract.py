@@ -12,6 +12,7 @@ auto-prefixed ("gpt-5.6" -> "openai/gpt-5.6"); set a full id like
 import json
 import os
 import re
+import time
 
 from openai import OpenAI
 
@@ -70,17 +71,31 @@ JSON_FALLBACK_SUFFIX = (
 
 
 def _extract_json_fallback(client: OpenAI, model: str, transcript: str) -> dict:
-    """Plain JSON-mode path for models without structured-output support."""
-    completion = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT + JSON_FALLBACK_SUFFIX},
-            {"role": "user", "content": transcript},
-        ],
-    )
-    text = completion.choices[0].message.content or ""
-    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip())
-    return MeetingExtraction.model_validate_json(text).model_dump()
+    """Plain JSON-mode path for models without structured-output support.
+
+    Free-tier models occasionally return empty or malformed output, so
+    retry a few times before giving up.
+    """
+    last_error: Exception | None = None
+    for attempt in range(3):
+        if attempt:
+            time.sleep(10)
+        try:
+            completion = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT + JSON_FALLBACK_SUFFIX},
+                    {"role": "user", "content": transcript},
+                ],
+            )
+            text = (completion.choices[0].message.content or "").strip()
+            text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text)
+            if not text:
+                raise ValueError("model returned an empty response")
+            return MeetingExtraction.model_validate_json(text).model_dump()
+        except Exception as exc:
+            last_error = exc
+    raise last_error
 
 
 def extract_actions(transcript: str) -> dict:
