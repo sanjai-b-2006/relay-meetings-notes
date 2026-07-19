@@ -50,9 +50,11 @@ Fill in `.env`:
 | `NOTION_TOKEN`, `NOTION_PARENT_PAGE_ID` | Notion filing | notion.so/my-integrations (share the parent page with the integration) |
 
 **Demo mode (no tokens needed):** any tool whose tokens are missing is *not* an
-error — Relay shows exactly what it *would* have filed. You can run the whole
-pipeline with only an `OPENAI_API_KEY`, or test filing with **zero** keys using
-the pre-extracted sample below.
+error — Relay shows exactly what it *would* have filed. And the **"Try demo (no
+API key)"** button in the UI loads a pre-extracted sample record straight into
+the review screen, so the entire paste → review → file flow can be tested with
+**zero** keys of any kind. With just an `OPENAI_API_KEY`, live GPT-5.6
+extraction works too.
 
 ## Run
 

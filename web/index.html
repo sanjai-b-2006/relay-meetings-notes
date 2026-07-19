@@ -83,6 +83,7 @@
     <div class="row">
       <button id="btn-extract">Extract action items</button>
       <button class="ghost" id="btn-sample">Load sample transcript</button>
+      <button class="ghost" id="btn-demo" title="Skips the GPT-5.6 call and loads a pre-extracted sample record">Try demo (no API key)</button>
       <span id="spinner">Working…</span>
     </div>
     <div class="error-msg" id="extract-error"></div>
@@ -133,6 +134,15 @@ const SAMPLE_URL = "/samples/standup.txt";
 $("btn-sample").onclick = async () => {
   const r = await fetch(SAMPLE_URL);
   $("transcript").value = r.ok ? await r.text() : "Sample not found — paste your own transcript.";
+};
+
+$("btn-demo").onclick = async () => {
+  $("extract-error").textContent = "";
+  const r = await fetch("/samples/standup.json");
+  if (!r.ok) { $("extract-error").textContent = "Sample extraction not found."; return; }
+  extraction = await r.json();
+  renderReview();
+  setStep(2);
 };
 
 function setStep(n) {

@@ -31,6 +31,12 @@ def sample_transcript() -> FileResponse:
     return FileResponse(ROOT / "samples" / "standup.txt", media_type="text/plain")
 
 
+@app.get("/samples/standup.json")
+def sample_extraction() -> FileResponse:
+    """Pre-extracted record — lets the review/filing flow run without an OpenAI key."""
+    return FileResponse(ROOT / "samples" / "standup.json", media_type="application/json")
+
+
 class ExtractRequest(BaseModel):
     transcript: str
 
