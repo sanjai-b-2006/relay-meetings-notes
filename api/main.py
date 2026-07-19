@@ -8,7 +8,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+# anchor to the project root so the server works regardless of cwd
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
