@@ -3,10 +3,10 @@
 Two connection modes, auto-detected from the environment:
 
 1. Composio (recommended if you don't want to hunt for per-service API
-   keys): set COMPOSIO_MCP_URL. You connect Slack/Linear/Notion via OAuth
-   login in the Composio dashboard (dashboard.composio.dev), bundle them
-   into one "MCP Server", and paste its URL here. One HTTP MCP server
-   covers all three tools.
+   keys): set COMPOSIO_API_KEY (from dashboard.composio.dev -> Settings ->
+   API Keys). Connect Slack/Linear/Notion via OAuth login in the dashboard.
+   No URL to find -- Relay talks to Composio's fixed managed endpoint
+   (COMPOSIO_CONNECT_URL) unless COMPOSIO_MCP_URL overrides it.
 
 2. Direct per-service stdio servers (the original approach): each tool
    needs its own token(s), documented in .env.example / SETUP_TOKENS.md.
@@ -33,8 +33,13 @@ TOOL_TOKENS: dict[str, list[str]] = {
 }
 
 
+# Composio's fixed managed MCP endpoint -- works for any account, no
+# per-project "create an MCP server" step needed. Auth is one header.
+COMPOSIO_CONNECT_URL = "https://connect.composio.dev/mcp"
+
+
 def composio_enabled() -> bool:
-    return bool(os.getenv("COMPOSIO_MCP_URL"))
+    return bool(os.getenv("COMPOSIO_API_KEY"))
 
 
 def configured_tools() -> list[str]:
@@ -57,12 +62,11 @@ def missing_tokens(tool: str) -> list[str]:
 
 
 def build_composio_server() -> MCPServerStreamableHttp:
-    headers = {}
-    if os.getenv("COMPOSIO_API_KEY"):
-        headers["x-api-key"] = os.environ["COMPOSIO_API_KEY"]
+    url = os.getenv("COMPOSIO_MCP_URL", COMPOSIO_CONNECT_URL)
+    headers = {"x-consumer-api-key": os.environ["COMPOSIO_API_KEY"]}
     return MCPServerStreamableHttp(
         name="composio",
-        params={"url": os.environ["COMPOSIO_MCP_URL"], "headers": headers},
+        params={"url": url, "headers": headers},
         cache_tools_list=True,
         client_session_timeout_seconds=60,
     )

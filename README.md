@@ -84,40 +84,33 @@ tested in under a minute without any API keys.
 
 ## Connecting Codex to this project (Slack/Linear/Notion via Composio)
 
-If you're doing your Build Week session in **Codex** and want it to be able to
-call Slack/Linear/Notion directly (e.g. to test filing, or to extend
-`relay/mcp_config.py`), connect the same Composio MCP server there. Codex
-reads MCP config from `~/.codex/config.toml`:
+If you're doing your Build Week session in **Codex** and want it to be able
+to call Slack/Linear/Notion directly (e.g. to test filing, or to extend
+`relay/mcp_config.py`), connect Composio's managed MCP endpoint there too.
+
+**CLI (recommended — handles auth for you):**
+
+```bash
+codex mcp add https://connect.composio.dev/mcp
+```
+
+This opens a browser to authorize Codex against your Composio account. Verify
+with `codex mcp list` (or `/mcp` inside a Codex session) — it should list
+`composio` with Slack/Linear/Notion tools available.
+
+**Manual config**, if you'd rather not do the browser flow — edit
+`~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.composio]
-url = "<your Composio MCP Server URL, from dashboard.composio.dev>"
-
-[mcp_servers.composio.env_http_headers]
-x-api-key = "COMPOSIO_API_KEY"   # name of an env var, not the key itself
+url = "https://connect.composio.dev/mcp"
+http_headers = { "x-consumer-api-key" = "ak_..." }   # your Composio API key
 ```
-
-Then, before launching Codex, make sure that env var is actually set in your
-shell (`export COMPOSIO_API_KEY=comp_...` / `$env:COMPOSIO_API_KEY = "comp_..."`
-on Windows) — Codex reads the header value out of it at connect time.
-
-Or non-interactively, from the terminal:
-
-```bash
-codex mcp add composio --url "<Composio MCP Server URL>"
-```
-
-(then add the `env_http_headers` block by hand in `config.toml` — the CLI's
-`--bearer-token-env-var` flag only covers plain `Authorization: Bearer`
-auth, and Composio uses an `x-api-key` header.)
-
-Verify inside a Codex session with `/mcp` — it should list `composio` with
-its Slack/Linear/Notion tools.
 
 **Note:** this is separate from Relay's own runtime config. The app itself
-(`uvicorn`/`python -m relay`) reads `COMPOSIO_MCP_URL` / `COMPOSIO_API_KEY`
-from **this project's `.env`**, not from Codex's or Claude's MCP settings —
-see the Composio section of [SETUP_TOKENS.md](SETUP_TOKENS.md#2-composio).
+(`uvicorn`/`python -m relay`) reads `COMPOSIO_API_KEY` from **this project's
+`.env`**, not from Codex's or Claude's MCP settings — see the Composio
+section of [SETUP_TOKENS.md](SETUP_TOKENS.md#2-composio).
 
 ## Project layout
 

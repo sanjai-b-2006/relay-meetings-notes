@@ -37,17 +37,17 @@ to §3–5 below instead. If you want the OAuth path:
 
 1. Go to <https://dashboard.composio.dev> → sign up (free tier available).
 2. Copy your Composio API key: **Settings → API Keys** → `COMPOSIO_API_KEY`.
+   (Starts with `ak_` — that's all you need; there's no separate URL to
+   hunt for. Relay talks to Composio's fixed managed endpoint,
+   `https://connect.composio.dev/mcp`, authenticated by this one key.)
 3. Find **Slack**, **Notion**, and **Linear** in the toolkit/app catalog and
    click **Connect** (label may read "Add Connection") for each — this logs
    you into that app directly (Slack/Notion/Linear's own login screen), not
    a developer console. No secrets to copy.
-4. Bundle the three connected toolkits into one **MCP Server** (Composio's
-   dashboard has an MCP/Tool Router section for this) and copy the URL it
-   gives you → `COMPOSIO_MCP_URL`.
-5. Set `COMPOSIO_TOOLS=slack,linear,notion` (or just the ones you connected).
-6. Composio's dashboard UI changes over time — if a label above doesn't
-   match what you see, look for "Connect"/"OAuth"/"MCP Server" wording; the
-   underlying flow (per-app login, then a URL) stays the same.
+4. Set `COMPOSIO_TOOLS=slack,linear,notion` (or just the ones you connected).
+5. Composio's dashboard UI changes over time — if a label above doesn't
+   match what you see, look for "Connect"/"OAuth" wording; the underlying
+   flow (per-app login) stays the same.
 
 Quick test: `python -m relay file samples/standup.json` — all three tools
 should show `live` instead of `demo mode`.
