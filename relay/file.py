@@ -11,6 +11,7 @@ what would have been filed instead of erroring (judge-reproducibility).
 """
 
 import contextlib
+import json
 import os
 
 from agents import Agent, OpenAIChatCompletionsModel, Runner, set_tracing_disabled
@@ -19,6 +20,41 @@ from agents.items import ToolCallOutputItem
 from .extract import OPENROUTER_BASE_URL, get_model
 from .mcp_config import build_servers, configured_tools, missing_tokens
 from .schema import MeetingExtraction
+
+
+def _tool_call_outcome(item: ToolCallOutputItem) -> tuple[bool, str]:
+    """Was this MCP tool call actually successful?
+
+    Agents can narrate success even when the underlying tool returned an
+    error (seen live: Notion's API rejecting a malformed `parent` argument
+    while the model's final summary still claimed the page was created).
+    Inspect the raw MCP response instead of trusting the model's words.
+    """
+    raw = item.raw_item
+    output = raw.get("output") if isinstance(raw, dict) else None
+    chunks = output if isinstance(output, list) else [output]
+    text = " ".join(
+        c.get("text", "") for c in chunks if isinstance(c, dict) and "text" in c
+    ) or str(output)
+
+    try:
+        parsed = json.loads(text)
+    except (TypeError, ValueError):
+        parsed = None
+
+    if isinstance(parsed, dict):
+        status = parsed.get("status")
+        is_error = (
+            parsed.get("isError") is True
+            or parsed.get("object") == "error"
+            or parsed.get("ok") is False
+            or (isinstance(status, int) and status >= 400)
+            or "error" in parsed
+        )
+        if is_error:
+            return False, parsed.get("message") or text[:300]
+
+    return True, text[:300]
 
 
 def get_agent_model():
@@ -52,8 +88,17 @@ must file it into the tools listed in the request using your MCP tools.
   high/medium/low to urgent/high/medium if the tool supports priority.
   Use the team given in the request, otherwise the first available team.
 - Notion: create ONE page titled '<meeting title> — <date>' under the
-  parent page given in the request (or the workspace root). Body: summary,
-  decisions, action items (as to-dos), open questions.
+  parent page given in the request (or the workspace root).
+  IMPORTANT (Notion API is strict about shapes -- get these exactly right):
+  - `parent` must be an OBJECT: {"page_id": "<the id>"}, never a bare string.
+  - Keep `children` to ONE block, type "paragraph", to minimize the chance
+    of a malformed block. Put the ENTIRE body — summary, decisions, action
+    items with owner/due, open questions — as one paragraph's rich_text,
+    using newlines and dashes for structure. Do not use to_do/heading
+    blocks; a single paragraph block is far more reliable to construct
+    correctly than a multi-block array.
+  If a call returns an error, read it, fix the arguments, and retry before
+  giving up.
 
 File ONLY into the tools listed in the request — the user explicitly
 approved these and nothing else. Do not invent content beyond the record.
@@ -137,28 +182,35 @@ async def file_actions(extraction: dict, targets: list[str] | None = None) -> di
         )
         try:
             run = await Runner.run(agent, build_filing_prompt(extraction, live))
-            tool_calls_made = sum(
-                1 for item in run.new_items if isinstance(item, ToolCallOutputItem)
-            )
-            if tool_calls_made == 0:
+            outcomes = [
+                _tool_call_outcome(item)
+                for item in run.new_items
+                if isinstance(item, ToolCallOutputItem)
+            ]
+            successes = [o for o in outcomes if o[0]]
+            failures = [o for o in outcomes if not o[0]]
+
+            if not outcomes:
                 # The agent returned without ever calling an MCP tool -- a
-                # silent no-op some weaker models produce. Don't report
-                # "filed" for something that never happened.
-                for t in live:
-                    results[t] = {
-                        "status": "error",
-                        "detail": (
-                            "Agent completed without calling any tools -- nothing "
-                            "was actually filed. This is a model reliability issue "
-                            "(seen on weaker/free models); try a stronger RELAY_MODEL."
-                        ),
-                    }
+                # silent no-op some weaker models produce.
+                status, detail = "error", (
+                    "Agent completed without calling any tools -- nothing "
+                    "was actually filed. This is a model reliability issue "
+                    "(seen on weaker/free models); try a stronger RELAY_MODEL."
+                )
+            elif not successes:
+                # Every tool call the agent made came back as an error, but
+                # the agent may still have (wrongly) claimed success.
+                status = "error"
+                detail = "All tool calls failed:\n" + "\n".join(
+                    f"- {msg}" for _, msg in failures
+                )
             else:
-                for t in live:
-                    results[t] = {
-                        "status": "filed",
-                        "detail": f"{run.final_output}\n\n({tool_calls_made} tool call(s) executed)",
-                    }
+                status = "filed"
+                detail = f"{run.final_output}\n\n({len(successes)}/{len(outcomes)} tool call(s) succeeded)"
+
+            for t in live:
+                results[t] = {"status": status, "detail": detail}
         except Exception as exc:  # report per-tool so partial failures are visible
             for t in live:
                 results[t] = {"status": "error", "detail": str(exc)}
