@@ -14,6 +14,7 @@ import contextlib
 import os
 
 from agents import Agent, OpenAIChatCompletionsModel, Runner, set_tracing_disabled
+from agents.items import ToolCallOutputItem
 
 from .extract import OPENROUTER_BASE_URL, get_model
 from .mcp_config import build_servers, configured_tools, missing_tokens
@@ -136,8 +137,28 @@ async def file_actions(extraction: dict, targets: list[str] | None = None) -> di
         )
         try:
             run = await Runner.run(agent, build_filing_prompt(extraction, live))
-            for t in live:
-                results[t] = {"status": "filed", "detail": run.final_output}
+            tool_calls_made = sum(
+                1 for item in run.new_items if isinstance(item, ToolCallOutputItem)
+            )
+            if tool_calls_made == 0:
+                # The agent returned without ever calling an MCP tool -- a
+                # silent no-op some weaker models produce. Don't report
+                # "filed" for something that never happened.
+                for t in live:
+                    results[t] = {
+                        "status": "error",
+                        "detail": (
+                            "Agent completed without calling any tools -- nothing "
+                            "was actually filed. This is a model reliability issue "
+                            "(seen on weaker/free models); try a stronger RELAY_MODEL."
+                        ),
+                    }
+            else:
+                for t in live:
+                    results[t] = {
+                        "status": "filed",
+                        "detail": f"{run.final_output}\n\n({tool_calls_made} tool call(s) executed)",
+                    }
         except Exception as exc:  # report per-tool so partial failures are visible
             for t in live:
                 results[t] = {"status": "error", "detail": str(exc)}
