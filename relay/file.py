@@ -21,6 +21,7 @@ from .extract import OPENROUTER_BASE_URL, get_model
 from .linear_filer import file_to_linear
 from .mcp_config import build_servers, composio_enabled, configured_tools, missing_tokens
 from .notion_filer import file_to_notion
+from .slack_filer import file_to_slack
 from .schema import MeetingExtraction
 
 
@@ -183,6 +184,13 @@ async def file_actions(extraction: dict, targets: list[str] | None = None) -> di
     if "linear" in live and not composio_enabled():
         results["linear"] = await file_to_linear(extraction)
         live = [t for t in live if t != "linear"]
+
+    # Same story for Slack: the agent's message text occasionally garbled
+    # with stray non-English tokens (free-model quality artifact). The
+    # recap is fully determined by the extraction JSON -- post it directly.
+    if "slack" in live and not composio_enabled():
+        results["slack"] = await file_to_slack(extraction)
+        live = [t for t in live if t != "slack"]
 
     if not live:
         return results
