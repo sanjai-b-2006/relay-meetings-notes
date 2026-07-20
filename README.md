@@ -71,7 +71,7 @@ python -m relay file samples/standup.json
 ```
 relay/            extract.py (GPT-5.6 extraction), file.py (orchestrator),
                    slack_filer.py / linear_filer.py / notion_filer.py (direct filing),
-                   mcp_config.py (MCP/Composio), schema.py, __main__.py (CLI)
+                   mcp_config.py (MCP servers), schema.py, __main__.py (CLI)
 api/main.py        FastAPI: /api/extract, /api/file, serves the UI
 web/index.html     the review UI (single file, no build step)
 samples/           sample transcript + pre-extracted JSON
