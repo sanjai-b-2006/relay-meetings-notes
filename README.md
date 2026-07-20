@@ -22,12 +22,23 @@ from — shown in the review UI so you can verify nothing was hallucinated.
 ```
 Frontend (review UI)  →  FastAPI backend
   paste / review /        1. /api/extract → GPT-5.6 structured extraction
-  confirm                 2. /api/file    → OpenAI Agents SDK agent
-                                            with MCP stdio servers attached
-                                            ├─ Slack MCP   (post recap)
-                                            ├─ Linear MCP  (create issues)
-                                            └─ Notion MCP  (write notes page)
+  confirm                 2. /api/file    → direct filing (no LLM needed --
+                                             the record is already structured)
+                                            ├─ Slack   chat.postMessage
+                                            ├─ Linear  GraphQL issueCreate (one per action item)
+                                            └─ Notion  REST pages.create
 ```
+
+Extraction is the one place GPT-5.6 genuinely needs to reason (unstructured
+transcript → structured JSON). Filing doesn't -- the record is already
+fully structured by the time it's approved, so there's nothing left for an
+LLM to decide. Early versions routed filing through an OpenAI Agents SDK
+agent with MCP servers attached; live testing showed models unreliable at
+completing multi-step tool-call loops (partial Linear runs, malformed
+Notion block JSON, garbled Slack text). Swapping to direct API calls fixed
+all three, and it's the more honest design anyway. The agent+MCP path is
+still available for the optional Composio-routed connection (see
+`relay/mcp_config.py`, `relay/file.py`).
 
 ## Setup
 
@@ -116,9 +127,12 @@ section of [SETUP_TOKENS.md](SETUP_TOKENS.md#2-composio).
 
 ```
 relay/            core package
-  extract.py      GPT-5.6 structured extraction (responses.parse → pydantic)
-  file.py         OpenAI Agents SDK filing agent + demo-mode previews
-  mcp_config.py   the 3 MCP stdio server definitions
+  extract.py      GPT-5.6 structured extraction (chat.completions.parse → pydantic)
+  file.py         orchestrates filing + demo-mode previews; agent/MCP path for Composio
+  slack_filer.py  direct Slack filing (chat.postMessage)
+  linear_filer.py direct Linear filing (GraphQL issueCreate, one call per action item)
+  notion_filer.py direct Notion filing (REST pages.create)
+  mcp_config.py   MCP stdio server + Composio HTTP server definitions
   schema.py       the extraction contract (pydantic)
   __main__.py     CLI (extract / file)
 api/main.py       FastAPI: /api/extract, /api/file, serves the UI
@@ -128,21 +142,45 @@ samples/          sample transcript + pre-extracted JSON for judges
 
 ## How Codex and GPT-5.6 were used
 
-<!-- FILL THIS IN YOURSELF before submitting — judges read it and score on it.
-     Describe honestly:
-     - which parts you built in Codex sessions (cite concrete examples: wiring
-       the MCP servers, debugging the agent loop, building the review UI, ...)
-     - where GPT-5.6 is used at runtime (extraction + the filing agent — see
-       RELAY_MODEL in .env) and where you used GPT-5.6 in Codex during the build
-     - key product/engineering decisions you made and why (e.g. the
-       review-before-file design, stdio MCP servers over OAuth for
-       reproducibility, demo mode for judges)
-     Remember to grab your /feedback Session ID from your primary Codex thread
-     and put it in the Devpost submission form. -->
+<!-- WRITE THIS SECTION YOURSELF, IN YOUR OWN WORDS, before submitting.
+     Judges read this and it's part of how they score Technological
+     Implementation and Quality of the Idea -- an AI-generated paragraph
+     pasted in as-is is exactly what the rules say not to do.
 
-- **GPT-5.6 at runtime:** powers both stages — the structured transcript
-  extraction (`relay/extract.py`) and the MCP filing agent (`relay/file.py`).
-- **Codex during the build:** _describe your sessions here._
+     Below are the real, concrete facts from the actual build, as talking
+     points / a memory-jogger -- turn the ones that are true for you into
+     your own sentences, cut what isn't relevant, add what's missing. Also
+     grab your /feedback Session ID from your primary Codex thread and put
+     it in the Devpost submission form.
+
+     Facts from the build, for reference:
+     - GPT-5.6 (via OpenAI or OpenRouter, see RELAY_MODEL) does the one
+       genuinely hard reasoning step: unstructured transcript -> structured
+       JSON (decisions, action items with owner/due/priority, source
+       quotes) in relay/extract.py.
+     - First design used an OpenAI Agents SDK agent with MCP servers
+       (Slack/Linear/Notion) for filing too. Live testing surfaced real
+       reliability problems: the agent sometimes returned "success" having
+       called zero tools, sometimes completed only 2 of 5 Linear issues,
+       and Notion's strict nested block schema was never constructed
+       correctly by any model tried (including a 550B one).
+     - Key engineering decision: since the approved record is already
+       fully structured JSON, filing doesn't need an LLM's judgment at
+       all -- rewrote Slack/Linear/Notion filing as direct API calls
+       (slack_filer.py, linear_filer.py, notion_filer.py) that build the
+       exact request from the data. This fixed reliability AND a garbled/
+       mixed-language text quality bug in one move, and made filing
+       deterministic regardless of model tier.
+     - Also added: a status-verification fix so the app checks actual API
+       responses instead of trusting the agent's claimed success (caught a
+       real false-positive bug live: "filed" was reported when nothing had
+       actually been created).
+     - Product decision: review-before-file UI (nothing files without
+       explicit confirmation, every item shows its source_quote) -- a
+       deliberate trust design, not just a feature.
+     - Demo-mode fallback (tools without configured tokens show a preview
+       of what would be filed) so judges can exercise the whole pipeline
+       without setting up accounts. -->
 
 ## License
 
