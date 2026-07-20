@@ -127,3 +127,26 @@ uvicorn api.main:app --port 8000     # open http://127.0.0.1:8000
 Paste a transcript → Extract → review/edit items → tick the tools →
 **Confirm & file**. Tools with tokens show a green **live** badge; the
 rest show **demo mode**.
+
+---
+
+## 7. Connecting Codex to this project (optional)
+
+If you're doing build work in **Codex** and want it to call
+Slack/Linear/Notion directly, connect Composio's managed endpoint there
+too — separate from Relay's own `.env` config above.
+
+```bash
+codex mcp add https://connect.composio.dev/mcp
+```
+
+This opens a browser to authorize Codex against your Composio account.
+Verify with `codex mcp list` (or `/mcp` in a Codex session).
+
+Manual config instead, in `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.composio]
+url = "https://connect.composio.dev/mcp"
+http_headers = { "x-consumer-api-key" = "ak_..." }   # your Composio API key
+```
