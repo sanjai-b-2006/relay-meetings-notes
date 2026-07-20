@@ -18,7 +18,8 @@ from agents import Agent, OpenAIChatCompletionsModel, Runner, set_tracing_disabl
 from agents.items import ToolCallOutputItem
 
 from .extract import OPENROUTER_BASE_URL, get_model
-from .mcp_config import build_servers, configured_tools, missing_tokens
+from .mcp_config import build_servers, composio_enabled, configured_tools, missing_tokens
+from .notion_filer import file_to_notion
 from .schema import MeetingExtraction
 
 
@@ -165,6 +166,15 @@ async def file_actions(extraction: dict, targets: list[str] | None = None) -> di
                 "detail": f"demo mode — missing token(s): {', '.join(missing_tokens(t))}",
                 "preview": render_preview(t, extraction),
             }
+
+    # Notion via the direct token: build the exact API payload in Python
+    # instead of asking an LLM to construct Notion's strict nested block
+    # schema -- no model tested could do that reliably. (Composio-routed
+    # Notion still goes through the agent below, since that path exposes a
+    # simpler `markdown` tool interface.)
+    if "notion" in live and not composio_enabled():
+        results["notion"] = await file_to_notion(extraction)
+        live = [t for t in live if t != "notion"]
 
     if not live:
         return results
