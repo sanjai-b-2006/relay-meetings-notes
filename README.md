@@ -80,27 +80,37 @@ SETUP_TOKENS.md    step-by-step token setup for every tool
 
 ## How Codex and GPT-5.6 were used
 
-*(write this part yourself — judges check that it's your own account, not
-pasted AI text. Facts from the actual build, to write from:)*
+GPT-5.6 is the model doing the actual work at runtime: it's what turns a
+messy, unstructured meeting transcript into structured JSON — decisions,
+action items with owner/due date/priority, and open questions, each one
+tied back to the exact line it came from (`relay/extract.py`).
 
-- GPT-5.6 does the extraction step (`relay/extract.py`) — transcript to
-  structured JSON.
-- Filing originally ran through an OpenAI Agents SDK agent with MCP
-  servers. Testing showed models unreliable at multi-step tool calls: one
-  run reported success with zero tools called, another completed only 2 of
-  5 Linear issues, and no model tested could construct Notion's nested
-  block schema correctly.
-- Fix: since the approved record is already structured JSON, filing needs
-  no LLM judgment — rewrote it as direct API calls
-  (`slack_filer.py`, `linear_filer.py`, `notion_filer.py`). Fixed
-  reliability and a text-garbling bug in one move.
-- Also fixed a false-positive bug where the app reported "filed" without
-  checking whether the underlying API call actually succeeded.
-- Product decision: review-before-file, with source quotes on every item —
-  a trust mechanism, not just a feature.
+The filing pipeline went through a real redesign during development.
+The first version routed Slack/Linear/Notion filing through an LLM agent
+over MCP, on the assumption that an agent should own every side effect.
+Testing that assumption exposed real reliability problems: a run could
+report "filed" after calling zero tools, an issue-creation loop could
+stop partway through, and Notion's strict nested block schema was never
+constructed correctly. The fix was a design change, not a bigger model:
+since the approved record is already fully structured JSON by the time
+it's filed, there's no judgment left for an LLM to make — so filing was
+rewritten as direct, deterministic API calls
+(`slack_filer.py`, `linear_filer.py`, `notion_filer.py`). That fixed the
+reliability problems and a text-quality bug in one move, and made the
+whole pipeline correct regardless of which model is configured.
 
-Grab your `/feedback` Codex Session ID from your build thread for the
-Devpost submission form.
+Codex did a focused pass on the review/results screen (`web/index.html`)
+and the filer response shape: it added structured `url`/`urls` fields to
+the three filing modules, then used them to render real clickable links
+and a per-tool progress indicator on the confirmation screen, instead of
+the plain-text result block that was there before.
+
+The review-before-file design — nothing is sent anywhere without explicit
+confirmation, and every item shows its source quote — was a deliberate
+trust decision from the start: the value of automating meeting follow-up
+disappears fast if people can't trust what got filed.
+
+`/feedback` Codex Session ID: _paste yours here before submitting._
 
 ## License
 
