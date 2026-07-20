@@ -154,7 +154,8 @@ def build_filing_prompt(extraction: dict, targets: list[str]) -> str:
 async def file_actions(extraction: dict, targets: list[str] | None = None) -> dict:
     """File the approved extraction into the selected tools.
 
-    Returns {tool: {"status": "filed"|"skipped"|"error", "detail": str}}.
+    Returns per-tool status/detail records. Direct filers may additionally
+    include `url` or `urls` so clients can link to what was created.
     """
     targets = [t for t in (targets or ALL_TOOLS) if t in ALL_TOOLS]
     available = set(configured_tools())

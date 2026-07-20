@@ -87,7 +87,8 @@ async def file_to_linear(extraction: dict) -> dict:
                 )
                 issue_result = result["issueCreate"]
                 if issue_result["success"]:
-                    created.append(issue_result["issue"]["identifier"])
+                    issue = issue_result["issue"]
+                    created.append({"identifier": issue["identifier"], "url": issue.get("url")})
                 else:
                     errors.append(f"{item.title}: creation returned success=false")
             except Exception as exc:
@@ -96,7 +97,9 @@ async def file_to_linear(extraction: dict) -> dict:
     if not created:
         return {"status": "error", "detail": "All issue creations failed:\n" + "\n".join(errors)}
 
-    detail = f"Created {len(created)}/{len(m.action_items)} issues: {', '.join(created)}"
+    identifiers = [issue["identifier"] for issue in created]
+    urls = [issue["url"] for issue in created if issue.get("url")]
+    detail = f"Created {len(created)}/{len(m.action_items)} issues: {', '.join(identifiers)}"
     if errors:
         detail += "\nFailed:\n" + "\n".join(errors)
-    return {"status": "filed", "detail": detail}
+    return {"status": "filed", "detail": detail, "urls": urls}

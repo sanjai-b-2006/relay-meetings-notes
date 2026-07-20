@@ -62,6 +62,32 @@
   .error-msg { color: var(--red); margin-top: 10px; }
   .hidden { display: none; }
 </style>
+<style>
+  :root { --bg:#0c0f17; --panel:#151a27; --panel2:#1b2130; --panel3:#222a3b; --border:#30394d; --text:#f0f3fb; --muted:#9da7bb; --accent:#6d8dff; --accent2:#9874ff; --green:#4ad49b; --amber:#f6bb65; --red:#f07878; --shadow:0 22px 70px rgba(0,0,0,.28); }
+  body { min-width:320px; background:radial-gradient(700px 360px at 18% -10%,rgba(109,141,255,.18),transparent 70%),var(--bg); font:15px/1.5 Inter,"Segoe UI",system-ui,sans-serif; }
+  .wrap { max-width:980px; padding:36px 24px 64px; }
+  header { animation:rise .42s ease both; } header h1 { font-size:clamp(28px,4vw,34px); letter-spacing:-.035em; } header p { max-width:700px; margin-top:8px; }
+  .steps { gap:10px; margin:28px 0 22px; } .step { padding:10px 12px; border-radius:10px; background:rgba(21,26,39,.68); font-weight:600; transition:.25s ease; }
+  .step.active { border-color:rgba(109,141,255,.8); background:linear-gradient(100deg,rgba(109,141,255,.20),rgba(152,116,255,.13)); box-shadow:inset 0 0 0 1px rgba(109,141,255,.08); }
+  .card { padding:22px; margin-bottom:14px; box-shadow:var(--shadow); } section:not(.hidden) { animation:rise .32s ease both; }
+  textarea { border-radius:10px; padding:14px; font:13px/1.55 ui-monospace,Consolas,monospace; transition:border-color .2s,box-shadow .2s; }
+  textarea:focus,input:focus,select:focus { outline:none; border-color:var(--accent)!important; box-shadow:0 0 0 3px rgba(109,141,255,.14); }
+  button { border-radius:9px; padding:10px 18px; font-size:14px; font-weight:700; box-shadow:0 7px 18px rgba(87,102,225,.2); transition:transform .16s,filter .16s,opacity .16s; }
+  button:hover:not(:disabled) { filter:brightness(1.1); transform:translateY(-1px); } button.ghost { box-shadow:none; }
+  .row { margin-top:16px; } .badge { padding:2px 8px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+  .item { background:linear-gradient(120deg,var(--panel2),rgba(27,33,48,.78)); border-radius:11px; padding:15px; transition:border-color .2s,transform .2s,background .2s; }
+  .item:hover { border-color:#46536e; transform:translateY(-1px); } .item .top { gap:11px; } .item .keep { width:18px; height:18px; accent-color:var(--accent); flex:0 0 auto; }
+  .item input[type=text],.item input[type=date],.item select { background:rgba(12,15,23,.72); border-radius:7px; padding:7px 8px; font-size:13px; }
+  .quote { margin-top:11px; border-left-width:2px; font-size:12px; } .meta { gap:8px; margin-top:11px; } h3 { letter-spacing:-.01em; }
+  .toggles { gap:10px; } .toggle { padding:10px 13px; transition:border-color .2s,background .2s; } .toggle:hover { border-color:#46536e; background:var(--panel3); }
+  .result { border-left-width:3px; padding:13px 14px; border-radius:8px; } .result a { color:#aebfff; font-weight:600; text-decoration:none; } .result a:hover { text-decoration:underline; }
+  .progress { display:grid; gap:8px; margin-top:16px; } .progress-tool { display:flex; align-items:center; gap:10px; min-height:42px; padding:9px 11px; border-radius:9px; background:var(--panel2); border:1px solid var(--border); color:var(--muted); font-size:13px; }
+  .progress-tool strong { color:var(--text); min-width:54px; } .progress-tool.is-working { border-color:rgba(109,141,255,.72); color:#c6d1ff; } .progress-tool.is-done { border-color:rgba(74,212,155,.52); color:#b9efd7; }
+  .loader { width:15px; height:15px; border:2px solid rgba(157,167,187,.28); border-top-color:var(--accent); border-radius:50%; animation:spin .75s linear infinite; flex:0 0 auto; }
+  .progress-tool.is-done .loader { animation:none; border-color:var(--green); position:relative; } .progress-tool.is-done .loader::after { content:""; display:block; width:4px; height:7px; border:solid var(--green); border-width:0 2px 2px 0; transform:translate(3px,1px) rotate(45deg); }
+  @keyframes spin { to { transform:rotate(360deg); } } @keyframes rise { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  @media (max-width:600px) { .wrap { padding:24px 14px 44px; } .steps { gap:6px; margin:22px 0 16px; } .step { padding:8px 5px; font-size:11px; } .card { padding:16px; border-radius:11px; } textarea { min-height:220px; } .row > button { flex:1 1 150px; } .toggle { width:100%; justify-content:space-between; } .item { padding:12px; } .item .top { align-items:flex-start; } .item input.title { min-width:0; } .meta label { display:flex; align-items:center; gap:5px; } .meta input,.meta select { max-width:125px; } }
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -109,6 +135,7 @@
         <button class="ghost" id="btn-back">Back</button>
         <span id="spinner2" style="color:var(--muted);display:none">Filing…</span>
       </div>
+      <div id="filing-progress" class="progress hidden" aria-live="polite"></div>
       <div class="error-msg" id="file-error"></div>
     </div>
   </section>
@@ -228,12 +255,55 @@ function collectEdits() {
 
 $("btn-back").onclick = () => setStep(1);
 
+function safeUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return ["http:", "https:"].includes(parsed.protocol) ? parsed.href : null;
+  } catch (_) { return null; }
+}
+
+function linkify(text) {
+  const escaped = esc(text || "");
+  return escaped.replace(/(https?:\/\/[^\s<]+)/g, (raw) => {
+    const url = safeUrl(raw);
+    return url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${raw}</a>` : raw;
+  }).replace(/\n/g, "<br>");
+}
+
+function renderFilingProgress(targets, results) {
+  $("filing-progress").innerHTML = targets.map(tool => {
+    const result = results && results[tool];
+    const complete = Boolean(result);
+    const label = complete ? (result.status === "filed" ? "Filed" : result.status) : "Filing…";
+    return `<div class="progress-tool ${complete ? "is-done" : "is-working"}">
+      <span class="loader" aria-hidden="true"></span><strong>${tool[0].toUpperCase() + tool.slice(1)}</strong><span>${esc(label)}</span>
+    </div>`;
+  }).join("");
+  $("filing-progress").classList.remove("hidden");
+}
+
+function renderResults(results) {
+  $("results").innerHTML = Object.entries(results).map(([tool, res]) => {
+    const urls = [...new Set([res.url, ...(res.urls || [])].filter(Boolean))];
+    const links = urls.map((url, index) => {
+      const safe = safeUrl(url);
+      return safe ? `<a href="${esc(safe)}" target="_blank" rel="noopener noreferrer">Open ${urls.length > 1 ? `issue ${index + 1}` : tool}</a>` : "";
+    }).filter(Boolean).join(" · ");
+    return `<div class="result ${res.status === "filed" ? "" : esc(res.status)}">
+      <b>${tool[0].toUpperCase() + tool.slice(1)} — ${esc(res.status)}</b>
+      <div>${linkify(res.preview || res.detail)}</div>${links ? `<div style="margin-top:8px">${links}</div>` : ""}
+    </div>`;
+  }).join("");
+}
+
 $("btn-file").onclick = async () => {
   const targets = [...document.querySelectorAll("input[name=tool]:checked")].map(c => c.value);
   $("file-error").textContent = "";
   if (!targets.length) { $("file-error").textContent = "Pick at least one tool."; return; }
   $("btn-file").disabled = true;
+  $("btn-back").disabled = true;
   $("spinner2").style.display = "inline";
+  renderFilingProgress(targets);
   try {
     const r = await fetch("/api/file", {
       method: "POST",
@@ -242,21 +312,20 @@ $("btn-file").onclick = async () => {
     });
     if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
     const { results } = await r.json();
-    $("results").innerHTML = Object.entries(results).map(([tool, res]) => `
-      <div class="result ${res.status === "filed" ? "" : res.status}">
-        <b>${tool[0].toUpperCase() + tool.slice(1)} — ${res.status}</b>
-        ${esc(res.preview || res.detail)}
-      </div>`).join("");
+    renderFilingProgress(targets, results);
+    renderResults(results);
     setStep(3);
   } catch (e) {
     $("file-error").textContent = e.message;
+    $("filing-progress").classList.add("hidden");
   } finally {
     $("btn-file").disabled = false;
+    $("btn-back").disabled = false;
     $("spinner2").style.display = "none";
   }
 };
 
-$("btn-again").onclick = () => { extraction = null; setStep(1); };
+$("btn-again").onclick = () => { extraction = null; $("filing-progress").classList.add("hidden"); setStep(1); };
 </script>
 </body>
 </html>

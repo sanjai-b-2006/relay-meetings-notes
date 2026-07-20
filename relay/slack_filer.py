@@ -61,7 +61,17 @@ async def file_to_slack(extraction: dict) -> dict:
     if not data.get("ok"):
         return {"status": "error", "detail": f"Slack API error: {data.get('error')}"}
 
+    channel, timestamp = data.get("channel"), data.get("ts")
+    # Slack message permalinks use the workspace, channel, and timestamp.
+    # SLACK_TEAM_ID is already required for the direct Slack integration.
+    message_url = None
+    if channel and timestamp and os.getenv("SLACK_TEAM_ID"):
+        message_url = (
+            f"https://app.slack.com/client/{os.environ['SLACK_TEAM_ID']}/"
+            f"{channel}/{timestamp.replace('.', '')}"
+        )
     return {
         "status": "filed",
-        "detail": f"Posted to Slack channel {data.get('channel')} (ts {data.get('ts')})",
+        "detail": f"Posted to Slack channel {channel}.",
+        "url": message_url,
     }

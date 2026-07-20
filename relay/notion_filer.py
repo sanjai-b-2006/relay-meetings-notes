@@ -107,4 +107,9 @@ async def file_to_notion(extraction: dict) -> dict:
         }
 
     data = response.json()
-    return {"status": "filed", "detail": f"Created Notion page: {data.get('url')}"}
+    url = data.get("url")
+    return {
+        "status": "filed",
+        "detail": "Created Notion page.",
+        "url": url,
+    }
