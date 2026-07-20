@@ -18,6 +18,7 @@ from agents import Agent, OpenAIChatCompletionsModel, Runner, set_tracing_disabl
 from agents.items import ToolCallOutputItem
 
 from .extract import OPENROUTER_BASE_URL, get_model
+from .linear_filer import file_to_linear
 from .mcp_config import build_servers, composio_enabled, configured_tools, missing_tokens
 from .notion_filer import file_to_notion
 from .schema import MeetingExtraction
@@ -175,6 +176,13 @@ async def file_actions(extraction: dict, targets: list[str] | None = None) -> di
     if "notion" in live and not composio_enabled():
         results["notion"] = await file_to_notion(extraction)
         live = [t for t in live if t != "notion"]
+
+    # Same story for Linear: the agent unreliably completed a full loop of
+    # issue-creation calls (stopped partway, or called a read-only tool and
+    # reported "filed" regardless). Create every issue directly.
+    if "linear" in live and not composio_enabled():
+        results["linear"] = await file_to_linear(extraction)
+        live = [t for t in live if t != "linear"]
 
     if not live:
         return results
